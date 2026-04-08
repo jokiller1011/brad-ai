@@ -90,11 +90,28 @@ authTabs.forEach(tab => {
     });
 });
 
+// Main form submit handler
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    await handleEmailAuth();
+});
+
+// Fallback click handler for sign-in button (Chromebook fix)
+authSubmitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await handleEmailAuth();
+});
+
+// Shared email authentication function
+async function handleEmailAuth() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     authError.textContent = '';
+    
+    if (!email || !password) {
+        authError.textContent = 'Please enter email and password.';
+        return;
+    }
     
     try {
         let result;
@@ -110,13 +127,16 @@ authForm.addEventListener('submit', async (e) => {
     } catch (error) {
         authError.textContent = error.message;
     }
-});
+}
 
+// GitHub OAuth with correct redirect path
 githubSigninBtn.addEventListener('click', async () => {
     try {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'github',
-            options: { redirectTo: window.location.origin }
+            options: { 
+                redirectTo: 'https://jokiller1011.github.io/brad-ai/' 
+            }
         });
         if (error) throw error;
     } catch (error) {
