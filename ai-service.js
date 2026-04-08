@@ -1,5 +1,5 @@
 // ai-service.js
-// Optimized models with proper identity system prompt
+// Optimized with verified models, preloading, and proper identity system prompt
 
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
@@ -36,11 +36,11 @@ class AIService {
         this.isLoading = true;
         this.modelType = modelType;
 
-        // Lightweight, verified models
+        // Reliable, verified models from Xenova that are known to work well
         const modelIdMap = {
-            swift: 'Xenova/LaMini-Flan-T5-77M',    // Fastest
-            spark: 'Xenova/gpt2',                  // Balanced
-            fleet: 'Xenova/t5-small'               // Most capable of the three
+            swift: 'Xenova/gpt2',            // Fast and reliable
+            spark: 'Xenova/distilgpt2',      // Lightweight and balanced
+            fleet: 'Xenova/Qwen1.5-0.5B-Chat' // Modern and powerful
         };
         const modelId = modelIdMap[modelType];
 
@@ -62,6 +62,7 @@ class AIService {
             });
             
             this.isLoading = false;
+            console.log(`${modelType} model loaded successfully.`);
             if (onProgress) onProgress({ status: 'ready', progress: 100, message: `${modelType} model ready.` });
             return this.activeModel;
 
@@ -78,7 +79,7 @@ class AIService {
 
         const systemPrompt = customSystemPrompt || BRAD_SYSTEM_PROMPT;
 
-        // Format prompt with proper instruction template
+        // Format prompt with proper instruction template for chat models
         let fullPrompt = `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`;
 
         const result = await this.activeModel(fullPrompt, {
