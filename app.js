@@ -5,6 +5,11 @@
 const SUPABASE_URL = 'https://fjxcmnyeipwequaxmdlx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqeGNtbnllaXB3ZXF1YXhtZGx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODM2NjAsImV4cCI6MjA5MTI1OTY2MH0.2d5ax1fYJtQIF0Ne0xhbH9tzQivS9M-WBN5WaVOSbBA';
 
+// Fix for GitHub Pages subpath redirect
+if (window.location.hash.includes('access_token') && window.location.pathname !== '/brad-ai/') {
+    window.location.replace('/brad-ai/' + window.location.hash);
+}
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
