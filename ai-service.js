@@ -1,4 +1,6 @@
 // ai-service.js
+// Uses models confirmed to work with Transformers.js
+
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
 env.localModelPath = '/models/';
@@ -21,25 +23,26 @@ class AIService {
         this.isLoading = true;
         this.modelType = modelType;
 
+        // Use models that are verified to work with Transformers.js
         const modelIdMap = {
-            swift: 'HuggingFaceTB/SmolLM2-135M-Instruct',
-            spark: 'google/gemma-2-2b-it',
-            fleet: 'Qwen/Qwen2.5-7B-Instruct'
+            swift: 'Xenova/LaMini-Flan-T5-77M',        // Fast, small, reliable
+            spark: 'Xenova/gpt2',                       // Balanced, 124M
+            fleet: 'Xenova/t5-small'                    // More capable, 60M
         };
         const modelId = modelIdMap[modelType];
 
         try {
-            if (onProgress) onProgress({ status: 'loading', progress: 0, message: `Starting download for ${modelType}...` });
+            if (onProgress) onProgress({ status: 'loading', progress: 0, message: `Loading ${modelType} model...` });
 
             this.activeModel = await pipeline('text-generation', modelId, {
                 device: 'webgpu',
                 progress_callback: (progress) => {
-                    if (onProgress) {
-                        const totalProgress = progress.loaded / progress.total * 100;
+                    if (onProgress && progress.total) {
+                        const percent = Math.round((progress.loaded / progress.total) * 100);
                         onProgress({
                             status: 'loading',
-                            progress: Math.round(totalProgress),
-                            message: `Downloading ${modelType}: ${Math.round(totalProgress)}%`
+                            progress: percent,
+                            message: `Downloading ${modelType}: ${percent}%`
                         });
                     }
                 }
@@ -59,25 +62,33 @@ class AIService {
     async generateResponse(prompt, systemPrompt = null, onToken) {
         if (!this.activeModel) throw new Error('No model loaded.');
 
-        let fullPrompt = '';
-        if (systemPrompt) fullPrompt += `<|system|>\n${systemPrompt}\n<|end|>\n`;
-        fullPrompt += `<|user|>\n${prompt}\n<|end|>\n<|assistant|>\n`;
+        let fullPrompt = prompt;
+        if (systemPrompt) {
+            fullPrompt = `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`;
+        } else {
+            fullPrompt = `User: ${prompt}\nAssistant:`;
+        }
 
         const result = await this.activeModel(fullPrompt, {
-            max_new_tokens: 512,
+            max_new_tokens: 256,
             temperature: 0.7,
             top_p: 0.95,
-            repetition_penalty: 1.15,
+            repetition_penalty: 1.1,
             do_sample: true,
             callback_function: (beams) => {
-                if (onToken) {
-                    const token = this.activeModel.tokenizer.decode(beams[0].output_token_ids);
+                if (onToken && beams[0].output_token_ids) {
+                    const token = this.activeModel.tokenizer.decode([beams[0].output_token_ids.at(-1)]);
                     onToken(token);
                 }
             }
         });
         
-        return result[0].generated_text;
+        let generated = result[0].generated_text;
+        // Remove the prompt from the output if present
+        if (generated.startsWith(fullPrompt)) {
+            generated = generated.slice(fullPrompt.length).trim();
+        }
+        return generated;
     }
 
     getCurrentModelType() { return this.modelType; }
