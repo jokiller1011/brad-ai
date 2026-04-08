@@ -59,6 +59,12 @@ const agentToggle = document.getElementById('agent-toggle');
 const fileInput = document.getElementById('file-input');
 const fileUploadBtn = document.getElementById('file-upload-btn');
 
+// Loading overlay elements
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingTitle = document.getElementById('loading-title');
+const loadingMessage = document.getElementById('loading-message');
+const loadingProgress = document.getElementById('loading-progress');
+
 // Settings Modal Elements
 const settingsModal = document.getElementById('settings-modal');
 const userProfileBtn = document.getElementById('user-profile');
@@ -73,6 +79,7 @@ const settingsAgentUsage = document.getElementById('settings-agent-usage');
 const settingsUploadUsage = document.getElementById('settings-upload-usage');
 const manageSubscriptionBtn = document.getElementById('manage-subscription-btn');
 const upgradePlanBtn = document.getElementById('upgrade-plan-btn');
+const trainingToggle = document.getElementById('training-toggle');
 
 let authMode = 'signin';
 
@@ -90,7 +97,6 @@ authTabs.forEach(tab => {
     });
 });
 
-// Shared email authentication function
 async function handleEmailAuth() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -117,19 +123,16 @@ async function handleEmailAuth() {
     }
 }
 
-// Form submit handler
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     await handleEmailAuth();
 });
 
-// Fallback click handler for Chromebook
 authSubmitBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     await handleEmailAuth();
 });
 
-// GitHub OAuth with correct redirect
 githubSigninBtn.addEventListener('click', async () => {
     try {
         const { error } = await supabase.auth.signInWithOAuth({
@@ -262,6 +265,18 @@ upgradePlanBtn.addEventListener('click', () => {
     window.open('https://buy.stripe.com/test_123', '_blank');
 });
 
+// Training toggle
+if (trainingToggle) {
+    trainingToggle.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        aiService.setTrainingEnabled(enabled);
+        localStorage.setItem('trainingEnabled', enabled);
+    });
+    const savedTraining = localStorage.getItem('trainingEnabled') === 'true';
+    trainingToggle.checked = savedTraining;
+    aiService.setTrainingEnabled(savedTraining);
+}
+
 function updateSettingsModal() {
     if (!currentUser) return;
     
@@ -365,20 +380,34 @@ async function sendMessage() {
     welcomeScreen.style.display = 'none';
     
     try {
-        const loadingId = addLoadingMessage();
-        
+        // Show loading overlay if model not loaded
         if (aiService.getCurrentModelType() !== model) {
-            const originalBadgeText = usageBadge.innerHTML;
-            usageBadge.innerHTML = `<span>Loading ${model}... 0%</span>`;
+            loadingOverlay.style.display = 'flex';
+            loadingTitle.textContent = `Loading ${model.charAt(0).toUpperCase() + model.slice(1)} Model`;
+            loadingMessage.textContent = 'Downloading model files...';
+            loadingProgress.style.width = '0%';
             
             await aiService.loadModel(model, (progress) => {
                 if (progress.status === 'loading') {
-                    usageBadge.innerHTML = `<span>Loading ${model}: ${progress.progress}%</span>`;
+                    loadingMessage.textContent = progress.message || 'Downloading...';
+                    loadingProgress.style.width = progress.progress + '%';
                 } else if (progress.status === 'ready') {
-                    usageBadge.innerHTML = originalBadgeText;
+                    loadingMessage.textContent = 'Model ready!';
+                    loadingProgress.style.width = '100%';
+                    setTimeout(() => {
+                        loadingOverlay.style.display = 'none';
+                    }, 500);
+                } else if (progress.status === 'error') {
+                    loadingMessage.textContent = 'Error loading model';
+                    setTimeout(() => {
+                        loadingOverlay.style.display = 'none';
+                    }, 2000);
                 }
             });
         }
+        
+        // Add a small thinking indicator
+        const loadingId = addLoadingMessage();
         
         const loadingElement = document.getElementById(loadingId);
         if (loadingElement) loadingElement.remove();
@@ -405,6 +434,7 @@ async function sendMessage() {
             assistantElement.textContent = result.finalOutput;
             usage.agents++;
         } else {
+            // Use the built-in system prompt from aiService (Brad AI identity)
             await aiService.generateResponse(text, null, (token) => {
                 assistantElement.textContent += token;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -416,6 +446,7 @@ async function sendMessage() {
         
     } catch (error) {
         console.error('AI Error:', error);
+        loadingOverlay.style.display = 'none';
         addMessage('assistant', `Sorry, an error occurred: ${error.message}`);
     }
 }
@@ -460,33 +491,33 @@ function initializeAgents() {
         'researcher',
         'Research Specialist',
         'fleet',
-        'You are a research agent. Gather and summarize factual information concisely.'
+        'You are a research agent for Brad AI. Provide factual, concise summaries.'
     );
     agentService.registerAgent(
         'writer',
         'Creative Writer',
         'spark',
-        'You are a writer. Turn research notes into engaging content.'
+        'You are a writer for Brad AI. Turn research into engaging content.'
     );
     agentService.registerAgent(
         'editor',
         'Editor',
         'swift',
-        'You are an editor. Polish text for grammar and clarity.'
+        'You are an editor for Brad AI. Polish text for grammar and clarity.'
     );
     
     agentService.defineWorkflow('research-writer', [
         {
             name: 'research',
             agent: 'researcher',
-            preparePrompt: (query) => `Research: ${query}\nProvide key facts.`
+            preparePrompt: (query) => `Research the following: ${query}\nProvide key facts only.`
         },
         {
             name: 'draft',
             agent: 'writer',
             preparePrompt: (_, results) => {
                 const research = results.find(r => r.agent === 'researcher').output;
-                return `Using these notes, write a short blog post:\n\n${research}`;
+                return `Using these notes, write a short blog post as Brad AI:\n\n${research}`;
             }
         },
         {
@@ -494,7 +525,7 @@ function initializeAgents() {
             agent: 'editor',
             preparePrompt: (_, results) => {
                 const draft = results.find(r => r.agent === 'writer').output;
-                return `Edit for grammar and clarity:\n\n${draft}`;
+                return `Edit for grammar and clarity. Keep Brad AI's professional tone:\n\n${draft}`;
             }
         }
     ]);
