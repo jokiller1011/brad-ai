@@ -1,16 +1,29 @@
 // ai-service.js
-// Uses official Transformers.js example models - guaranteed to work
+// Optimized models with proper identity system prompt
 
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
 // Reduce console noise
 env.backends.onnx.logLevel = 'error';
 
+// Default system prompt that defines Brad AI's identity
+const BRAD_SYSTEM_PROMPT = `You are Brad AI, a private, on-device artificial intelligence assistant created by Brad. 
+You are helpful, professional, and concise. 
+You do not pretend to be human or have a personal life. 
+You are an AI running directly in the user's browser, ensuring complete privacy.
+If asked about yourself, state that you are Brad AI, a local AI assistant.`;
+
 class AIService {
     constructor() {
         this.activeModel = null;
         this.modelType = null;
         this.isLoading = false;
+        this.trainingEnabled = false; // placeholder for future training toggle
+    }
+
+    setTrainingEnabled(enabled) {
+        this.trainingEnabled = enabled;
+        console.log('Training mode:', enabled ? 'ON' : 'OFF');
     }
 
     async loadModel(modelType, onProgress) {
@@ -23,18 +36,17 @@ class AIService {
         this.isLoading = true;
         this.modelType = modelType;
 
-        // Models verified to work with Transformers.js (from official examples)
+        // Lightweight, verified models
         const modelIdMap = {
-            swift: 'Xenova/LaMini-Flan-T5-77M',    // Fast, works
-            spark: 'Xenova/gpt2',                  // Balanced, works
-            fleet: 'Xenova/t5-small'               // More capable, works
+            swift: 'Xenova/LaMini-Flan-T5-77M',    // Fastest
+            spark: 'Xenova/gpt2',                  // Balanced
+            fleet: 'Xenova/t5-small'               // Most capable of the three
         };
         const modelId = modelIdMap[modelType];
 
         try {
             if (onProgress) onProgress({ status: 'loading', progress: 0, message: `Loading ${modelType} model...` });
 
-            // Load the pipeline
             this.activeModel = await pipeline('text-generation', modelId, {
                 device: 'webgpu',
                 progress_callback: (progress) => {
@@ -61,15 +73,13 @@ class AIService {
         }
     }
 
-    async generateResponse(prompt, systemPrompt = null, onToken) {
+    async generateResponse(prompt, customSystemPrompt = null, onToken) {
         if (!this.activeModel) throw new Error('No model loaded.');
 
-        let fullPrompt = prompt;
-        if (systemPrompt) {
-            fullPrompt = `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`;
-        } else {
-            fullPrompt = `User: ${prompt}\nAssistant:`;
-        }
+        const systemPrompt = customSystemPrompt || BRAD_SYSTEM_PROMPT;
+
+        // Format prompt with proper instruction template
+        let fullPrompt = `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`;
 
         const result = await this.activeModel(fullPrompt, {
             max_new_tokens: 256,
@@ -89,6 +99,12 @@ class AIService {
         if (generated.startsWith(fullPrompt)) {
             generated = generated.slice(fullPrompt.length).trim();
         }
+        
+        // Placeholder: if training enabled, we could log the interaction for future fine-tuning
+        if (this.trainingEnabled) {
+            console.log('[Training] Interaction:', { prompt, response: generated });
+        }
+        
         return generated;
     }
 
