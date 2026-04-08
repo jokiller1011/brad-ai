@@ -158,6 +158,18 @@
                 <p class="input-footer">Brad AI runs locally. Your data never leaves your device.</p>
             </div>
         </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner-large"></div>
+                <h3 id="loading-title">Loading Model</h3>
+                <p id="loading-message">Preparing Swift...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="loading-progress" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Account Settings Modal -->
@@ -207,6 +219,17 @@
                         <span>File Uploads</span>
                         <span id="settings-upload-usage">0 / 10</span>
                     </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Experimental</h3>
+                    <div class="settings-item settings-toggle">
+                        <span>AI Model Training</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="training-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-description">When enabled, interactions may be saved anonymously to improve Brad AI.</p>
                 </div>
                 <div class="settings-actions">
                     <button class="btn-secondary" id="manage-subscription-btn">Manage Subscription</button>
