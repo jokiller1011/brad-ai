@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brad AI — Private Intelligence</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Inter font (Claude style) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -45,10 +42,6 @@
                 <button class="auth-provider" id="github-signin">
                     <i data-lucide="github"></i>
                     GitHub
-                </button>
-                <button class="auth-provider" id="discord-signin">
-                    <i data-lucide="message-circle"></i>
-                    Discord
                 </button>
             </div>
         </div>
@@ -165,6 +158,63 @@
                 <p class="input-footer">Brad AI runs locally. Your data never leaves your device.</p>
             </div>
         </main>
+    </div>
+
+    <!-- Account Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Account Settings</h2>
+                <button class="icon-btn" id="close-settings-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="settings-section">
+                    <h3>Profile</h3>
+                    <div class="settings-item">
+                        <span>Email</span>
+                        <span id="settings-email">—</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>User ID</span>
+                        <span id="settings-user-id" class="text-mono">—</span>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Subscription</h3>
+                    <div class="settings-item">
+                        <span>Current Plan</span>
+                        <span class="plan-badge" id="settings-plan">Free</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>Swift Usage</span>
+                        <span id="settings-swift-usage">0 / 15</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>Spark Usage</span>
+                        <span id="settings-spark-usage">0 / 20</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>Fleet Usage</span>
+                        <span id="settings-fleet-usage">0 / 4</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>Agent Runs</span>
+                        <span id="settings-agent-usage">0 / 5</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>File Uploads</span>
+                        <span id="settings-upload-usage">0 / 10</span>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button class="btn-secondary" id="manage-subscription-btn">Manage Subscription</button>
+                    <button class="btn-primary" id="upgrade-plan-btn">Upgrade Plan</button>
+                </div>
+                <p class="settings-footer">Need help? Contact support@brad.ai</p>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="app.js"></script>
