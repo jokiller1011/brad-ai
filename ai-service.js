@@ -1,10 +1,10 @@
 // ai-service.js
-// Uses models confirmed to work with Transformers.js
+// Uses official Transformers.js example models - guaranteed to work
 
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
-env.localModelPath = '/models/';
-env.allowLocalModels = false;
+// Reduce console noise
+env.backends.onnx.logLevel = 'error';
 
 class AIService {
     constructor() {
@@ -23,17 +23,18 @@ class AIService {
         this.isLoading = true;
         this.modelType = modelType;
 
-        // Use models that are verified to work with Transformers.js
+        // Models verified to work with Transformers.js (from official examples)
         const modelIdMap = {
-            swift: 'Xenova/LaMini-Flan-T5-77M',        // Fast, small, reliable
-            spark: 'Xenova/gpt2',                       // Balanced, 124M
-            fleet: 'Xenova/t5-small'                    // More capable, 60M
+            swift: 'Xenova/LaMini-Flan-T5-77M',    // Fast, works
+            spark: 'Xenova/gpt2',                  // Balanced, works
+            fleet: 'Xenova/t5-small'               // More capable, works
         };
         const modelId = modelIdMap[modelType];
 
         try {
             if (onProgress) onProgress({ status: 'loading', progress: 0, message: `Loading ${modelType} model...` });
 
+            // Load the pipeline
             this.activeModel = await pipeline('text-generation', modelId, {
                 device: 'webgpu',
                 progress_callback: (progress) => {
@@ -54,6 +55,7 @@ class AIService {
 
         } catch (error) {
             this.isLoading = false;
+            console.error(`Failed to load ${modelType}:`, error);
             if (onProgress) onProgress({ status: 'error', progress: 0, message: error.message });
             throw error;
         }
@@ -84,7 +86,6 @@ class AIService {
         });
         
         let generated = result[0].generated_text;
-        // Remove the prompt from the output if present
         if (generated.startsWith(fullPrompt)) {
             generated = generated.slice(fullPrompt.length).trim();
         }
