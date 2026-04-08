@@ -1,3 +1,7 @@
+// ============================================
+// BRAD AI - MAIN APPLICATION
+// ============================================
+
 // Supabase Configuration - REPLACE WITH YOUR OWN
 const SUPABASE_URL = 'https://fjxcmnyeipwequaxmdlx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqeGNtbnllaXB3ZXF1YXhtZGx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODM2NjAsImV4cCI6MjA5MTI1OTY2MH0.2d5ax1fYJtQIF0Ne0xhbH9tzQivS9M-WBN5WaVOSbBA';
@@ -6,7 +10,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// App State
+// Import AI services
+import { aiService } from './ai-service.js';
+import { agentService } from './agent-service.js';
+import { fileService } from './file-service.js';
+
+// ============================================
+// STATE
+// ============================================
 let currentUser = null;
 let currentTheme = 'light';
 let sidebarOpen = true;
@@ -16,12 +27,15 @@ let usage = {
     spark: 0,
     fleet: 0,
     agents: 0,
-    video: 0,
     uploads: 0
 };
-let subscriptionTier = 'free'; // 'free', 'pro', 'xtreme', 'enterprise'
+let subscriptionTier = 'free';
+let agentEnabled = false;
+let currentWorkflow = 'research-writer';
 
-// DOM Elements
+// ============================================
+// DOM ELEMENTS
+// ============================================
 const authContainer = document.getElementById('auth-container');
 const appContainer = document.getElementById('app');
 const authForm = document.getElementById('auth-form');
@@ -30,7 +44,8 @@ const authSubmitBtn = document.getElementById('auth-submit-btn');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const authTabs = document.querySelectorAll('.auth-tab');
-const googleSigninBtn = document.getElementById('google-signin');
+const githubSigninBtn = document.getElementById('github-signin');
+const discordSigninBtn = document.getElementById('discord-signin');
 const signoutBtn = document.getElementById('signout-btn');
 const userEmailDisplay = document.getElementById('user-email-display');
 const userAvatar = document.getElementById('user-avatar');
@@ -48,13 +63,14 @@ const agentToggle = document.getElementById('agent-toggle');
 const fileInput = document.getElementById('file-input');
 const fileUploadBtn = document.getElementById('file-upload-btn');
 
-// Auth Mode (signin or signup)
 let authMode = 'signin';
 
 // Initialize Lucide icons
 lucide.createIcons();
 
-// --- Authentication Logic ---
+// ============================================
+// AUTHENTICATION
+// ============================================
 authTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         authTabs.forEach(t => t.classList.remove('active'));
@@ -86,10 +102,22 @@ authForm.addEventListener('submit', async (e) => {
     }
 });
 
-googleSigninBtn.addEventListener('click', async () => {
+githubSigninBtn.addEventListener('click', async () => {
     try {
         const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
+            provider: 'github',
+            options: { redirectTo: window.location.origin }
+        });
+        if (error) throw error;
+    } catch (error) {
+        authError.textContent = error.message;
+    }
+});
+
+discordSigninBtn.addEventListener('click', async () => {
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'discord',
             options: { redirectTo: window.location.origin }
         });
         if (error) throw error;
@@ -102,13 +130,14 @@ signoutBtn.addEventListener('click', async () => {
     await supabase.auth.signOut();
 });
 
-// --- Auth State Listener ---
+// Auth state listener
 supabase.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
         currentUser = session.user;
         showApp();
         loadUserProfile();
         loadUsageData();
+        initializeAgents();
     } else {
         currentUser = null;
         showAuth();
@@ -129,30 +158,30 @@ function showAuth() {
 }
 
 async function loadUserProfile() {
-    // In a real implementation, fetch profile from Supabase 'profiles' table
-    // For now, set default tier
+    // In production, fetch from Supabase profiles table
     subscriptionTier = 'free';
     updateUsageDisplay();
 }
 
 async function loadUsageData() {
-    // Fetch usage counts from Supabase 'usage' table
-    // For demo, we'll use local state initialized to 0
+    // In production, fetch from Supabase usage table
     updateUsageDisplay();
 }
 
 function updateUsageDisplay() {
     const limits = {
-        free: { swift: 15, spark: 20, fleet: 4 },
-        pro: { swift: Infinity, spark: Infinity, fleet: Infinity },
-        xtreme: { swift: Infinity, spark: Infinity, fleet: Infinity },
-        enterprise: { swift: Infinity, spark: Infinity, fleet: Infinity }
+        free: { swift: 15, spark: 20, fleet: 4, agents: 5, uploads: 10 },
+        pro: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: 200 },
+        xtreme: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: 1000 },
+        enterprise: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: Infinity }
     };
     const limit = limits[subscriptionTier]?.swift || 15;
     usageBadge.innerHTML = `<span>${subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)} · Swift ${usage.swift}/${limit === Infinity ? '∞' : limit}</span>`;
 }
 
-// --- Theme Toggle ---
+// ============================================
+// THEME
+// ============================================
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     currentTheme = theme;
@@ -166,11 +195,12 @@ themeToggle.addEventListener('click', () => {
     setTheme(currentTheme === 'light' ? 'dark' : 'light');
 });
 
-// Load saved theme
 const savedTheme = localStorage.getItem('theme') || 'light';
 setTheme(savedTheme);
 
-// --- Sidebar Toggle ---
+// ============================================
+// UI INTERACTIONS
+// ============================================
 sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
     sidebarOpen = !sidebarOpen;
@@ -179,54 +209,28 @@ sidebarToggle.addEventListener('click', () => {
     lucide.createIcons();
 });
 
-// --- New Chat ---
 newChatBtn.addEventListener('click', () => {
     messages = [];
     renderMessages();
     welcomeScreen.style.display = 'flex';
 });
 
-// --- Send Message (Placeholder for AI Integration) ---
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
+agentToggle.addEventListener('click', () => {
+    agentEnabled = !agentEnabled;
+    agentToggle.classList.toggle('active', agentEnabled);
+    const icon = agentToggle.querySelector('i');
+    icon.setAttribute('data-lucide', agentEnabled ? 'users' : 'user');
+    lucide.createIcons();
 });
 
-function sendMessage() {
-    const text = userInput.value.trim();
-    if (!text) return;
-    
-    // Check usage limits (simplified)
-    const model = modelSelect.value;
-    if (subscriptionTier === 'free') {
-        const limits = { swift: 15, spark: 20, fleet: 4 };
-        if (usage[model] >= limits[model]) {
-            alert(`You've reached your ${model} limit. Upgrade to continue.`);
-            return;
-        }
-    }
-    
-    // Add user message
-    addMessage('user', text);
-    userInput.value = '';
-    welcomeScreen.style.display = 'none';
-    
-    // Increment usage
-    usage[model]++;
-    updateUsageDisplay();
-    
-    // Simulate AI response (replace with actual model inference)
-    setTimeout(() => {
-        addMessage('assistant', `This is a simulated response from the ${model} model. In the next phase, we'll integrate Transformers.js to run real AI models locally in your browser.`);
-    }, 1000);
-}
-
-function addMessage(role, content) {
-    messages.push({ role, content });
+// ============================================
+// MESSAGING
+// ============================================
+function addMessage(role, content, id = null) {
+    const messageId = id || `msg-${Date.now()}-${Math.random()}`;
+    messages.push({ role, content, id: messageId });
     renderMessages();
+    return messageId;
 }
 
 function renderMessages() {
@@ -241,7 +245,7 @@ function renderMessages() {
     let html = '';
     messages.forEach(msg => {
         html += `
-            <div class="message ${msg.role}">
+            <div class="message ${msg.role}" id="${msg.id}">
                 <div class="message-content">${escapeHtml(msg.content)}</div>
             </div>
         `;
@@ -257,7 +261,114 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// --- File Upload ---
+function addLoadingMessage() {
+    const loadingId = `loading-${Date.now()}`;
+    const loadingHtml = `
+        <div class="message assistant" id="${loadingId}">
+            <div class="message-content">
+                <span class="loading-spinner"></span> Thinking...
+            </div>
+        </div>
+    `;
+    messagesContainer.insertAdjacentHTML('beforeend', loadingHtml);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return loadingId;
+}
+
+// ============================================
+// SEND MESSAGE (AI INTEGRATION)
+// ============================================
+sendBtn.addEventListener('click', sendMessage);
+userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+userInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+});
+
+async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    
+    const model = modelSelect.value;
+    
+    // Usage limit check
+    if (subscriptionTier === 'free') {
+        const limits = { swift: 15, spark: 20, fleet: 4 };
+        if (usage[model] >= limits[model]) {
+            alert(`You've reached your ${model} limit. Upgrade to continue.`);
+            return;
+        }
+    }
+    
+    addMessage('user', text);
+    userInput.value = '';
+    welcomeScreen.style.display = 'none';
+    
+    try {
+        const loadingId = addLoadingMessage();
+        
+        // Load model if needed
+        if (aiService.getCurrentModelType() !== model) {
+            const originalBadgeText = usageBadge.innerHTML;
+            usageBadge.innerHTML = `<span>Loading ${model}... 0%</span>`;
+            
+            await aiService.loadModel(model, (progress) => {
+                if (progress.status === 'loading') {
+                    usageBadge.innerHTML = `<span>Loading ${model}: ${progress.progress}%</span>`;
+                } else if (progress.status === 'ready') {
+                    usageBadge.innerHTML = originalBadgeText;
+                } else if (progress.status === 'error') {
+                    usageBadge.innerHTML = `<span style="color: #e5484d;">Error loading model</span>`;
+                }
+            });
+        }
+        
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) loadingElement.remove();
+        
+        const assistantMessageId = addMessage('assistant', '');
+        const assistantElement = document.querySelector(`#${assistantMessageId} .message-content`);
+        
+        if (agentEnabled) {
+            // Check agent usage limit
+            if (subscriptionTier === 'free' && usage.agents >= 5) {
+                alert('Agent usage limit reached. Upgrade for unlimited agent runs.');
+                return;
+            }
+            
+            const result = await agentService.executeWorkflow(
+                currentWorkflow,
+                text,
+                (progress) => console.log(`${progress.step}: ${progress.message}`)
+            );
+            assistantElement.textContent = result.finalOutput;
+            usage.agents++;
+        } else {
+            // Standard single-model response
+            await aiService.generateResponse(text, null, (token) => {
+                assistantElement.textContent += token;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+            usage[model]++;
+        }
+        
+        updateUsageDisplay();
+        
+    } catch (error) {
+        console.error('AI Error:', error);
+        addMessage('assistant', `Sorry, an error occurred: ${error.message}`);
+    }
+}
+
+// ============================================
+// FILE UPLOAD
+// ============================================
 fileUploadBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleFileUpload);
 
@@ -271,31 +382,78 @@ async function handleFileUpload(e) {
         return;
     }
     
-    // In production, process files here (extract text, create embeddings, etc.)
-    console.log('Files selected:', files.map(f => f.name));
-    usage.uploads++;
-    updateUsageDisplay();
+    for (const file of files) {
+        try {
+            addMessage('assistant', `Processing ${file.name}...`);
+            const extractedText = await fileService.extractTextFromFile(file);
+            if (extractedText) {
+                addMessage('user', `[File: ${file.name}]\n${extractedText.substring(0, 500)}${extractedText.length > 500 ? '...' : ''}`);
+            }
+            usage.uploads++;
+            updateUsageDisplay();
+        } catch (error) {
+            addMessage('assistant', `Couldn't process ${file.name}: ${error.message}`);
+        }
+    }
     fileInput.value = '';
 }
 
-// --- Agent Toggle ---
-agentToggle.addEventListener('click', () => {
-    alert('Agent collaboration will be available in the next update.');
-});
+// ============================================
+// AGENT INITIALIZATION
+// ============================================
+function initializeAgents() {
+    agentService.registerAgent(
+        'researcher',
+        'Research Specialist',
+        'fleet',
+        'You are a research agent. Gather and summarize factual information concisely.'
+    );
+    agentService.registerAgent(
+        'writer',
+        'Creative Writer',
+        'spark',
+        'You are a writer. Turn research notes into engaging content.'
+    );
+    agentService.registerAgent(
+        'editor',
+        'Editor',
+        'swift',
+        'You are an editor. Polish text for grammar and clarity.'
+    );
+    
+    agentService.defineWorkflow('research-writer', [
+        {
+            name: 'research',
+            agent: 'researcher',
+            preparePrompt: (query) => `Research: ${query}\nProvide key facts.`
+        },
+        {
+            name: 'draft',
+            agent: 'writer',
+            preparePrompt: (_, results) => {
+                const research = results.find(r => r.agent === 'researcher').output;
+                return `Using these notes, write a short blog post:\n\n${research}`;
+            }
+        },
+        {
+            name: 'edit',
+            agent: 'editor',
+            preparePrompt: (_, results) => {
+                const draft = results.find(r => r.agent === 'writer').output;
+                return `Edit for grammar and clarity:\n\n${draft}`;
+            }
+        }
+    ]);
+}
 
-// --- Auto-resize textarea ---
-userInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-});
-
-// Check initial auth state
+// Check initial auth
 supabase.auth.getSession().then(({ data: { session } }) => {
     if (session) {
         currentUser = session.user;
         showApp();
         loadUserProfile();
         loadUsageData();
+        initializeAgents();
     } else {
         showAuth();
     }
