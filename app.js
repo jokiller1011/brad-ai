@@ -1,6 +1,6 @@
 // Supabase Configuration - REPLACE WITH YOUR OWN
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+const SUPABASE_URL = 'https://fjxcmnyeipwequaxmdlx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqeGNtbnllaXB3ZXF1YXhtZGx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODM2NjAsImV4cCI6MjA5MTI1OTY2MH0.2d5ax1fYJtQIF0Ne0xhbH9tzQivS9M-WBN5WaVOSbBA';
 
 // Initialize Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
