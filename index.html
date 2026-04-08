@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brad AI — Private Intelligence</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Inter font (same as Claude) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Auth Overlay (shown when not logged in) -->
+    <div class="auth-container" id="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Brad AI</h1>
+                <p class="auth-subtitle">Private, collaborative machine intelligence</p>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="signin">Sign In</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required minlength="6">
+                </div>
+                <button type="submit" class="auth-submit" id="auth-submit-btn">Sign In</button>
+                <p class="auth-error" id="auth-error"></p>
+            </form>
+            <div class="auth-divider">
+                <span>or</span>
+            </div>
+            <button class="auth-provider" id="google-signin">
+                <i data-lucide="chrome"></i>
+                Continue with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until authenticated) -->
+    <div class="app" id="app" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="new-chat-btn">
+                    <i data-lucide="plus"></i>
+                    <span>New chat</span>
+                </button>
+            </div>
+            <div class="chat-history">
+                <div class="history-section">
+                    <h3>Today</h3>
+                    <ul id="history-today"></ul>
+                </div>
+                <div class="history-section">
+                    <h3>Yesterday</h3>
+                    <ul id="history-yesterday"></ul>
+                </div>
+                <div class="history-section">
+                    <h3>Previous 7 Days</h3>
+                    <ul id="history-week"></ul>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile">
+                    <div class="avatar" id="user-avatar"></div>
+                    <span id="user-email-display"></span>
+                </div>
+                <button class="icon-btn" id="theme-toggle" title="Toggle theme">
+                    <i data-lucide="sun"></i>
+                </button>
+                <button class="icon-btn" id="signout-btn" title="Sign out">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+                    <i data-lucide="panel-left-open"></i>
+                </button>
+                <div class="model-selector-wrapper">
+                    <select id="model-select" class="model-select">
+                        <option value="swift">Swift</option>
+                        <option value="spark">Spark</option>
+                        <option value="fleet">Fleet</option>
+                    </select>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="agent-toggle" title="Enable Agent Team">
+                        <i data-lucide="users"></i>
+                    </button>
+                    <div class="usage-badge" id="usage-badge">
+                        <span>Free · Swift 0/15</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="messages-container" id="messages-container">
+                <!-- Welcome screen -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <div class="welcome-content">
+                        <h2>Brad AI</h2>
+                        <p class="welcome-subtitle">Private · Collaborative · On‑Device</p>
+                        <div class="feature-grid">
+                            <div class="feature-card">
+                                <i data-lucide="zap"></i>
+                                <h3>Swift</h3>
+                                <p>Instant responses for quick tasks</p>
+                            </div>
+                            <div class="feature-card">
+                                <i data-lucide="sparkles"></i>
+                                <h3>Spark</h3>
+                                <p>Balanced for everyday use</p>
+                            </div>
+                            <div class="feature-card">
+                                <i data-lucide="rocket"></i>
+                                <h3>Fleet</h3>
+                                <p>Complex reasoning and deep analysis</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <div class="file-upload-row" id="file-preview-area" style="display: none;"></div>
+                    <textarea 
+                        id="user-input" 
+                        placeholder="Message Brad AI..." 
+                        rows="1"
+                        autofocus
+                    ></textarea>
+                    <div class="input-actions">
+                        <div class="input-actions-left">
+                            <button class="icon-btn" id="file-upload-btn" title="Upload file">
+                                <i data-lucide="paperclip"></i>
+                            </button>
+                            <input type="file" id="file-input" accept="image/*,.pdf,.txt,.md" multiple style="display: none;">
+                        </div>
+                        <button class="send-btn" id="send-btn" title="Send message">
+                            <i data-lucide="arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="input-footer">Brad AI runs locally. Your data never leaves your device.</p>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
