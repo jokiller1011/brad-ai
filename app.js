@@ -90,18 +90,6 @@ authTabs.forEach(tab => {
     });
 });
 
-// Main form submit handler
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await handleEmailAuth();
-});
-
-// Fallback click handler for sign-in button (Chromebook fix)
-authSubmitBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await handleEmailAuth();
-});
-
 // Shared email authentication function
 async function handleEmailAuth() {
     const email = emailInput.value.trim();
@@ -129,7 +117,19 @@ async function handleEmailAuth() {
     }
 }
 
-// GitHub OAuth with correct redirect path
+// Form submit handler
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleEmailAuth();
+});
+
+// Fallback click handler for Chromebook
+authSubmitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await handleEmailAuth();
+});
+
+// GitHub OAuth with correct redirect
 githubSigninBtn.addEventListener('click', async () => {
     try {
         const { error } = await supabase.auth.signInWithOAuth({
@@ -285,7 +285,7 @@ function updateSettingsModal() {
 // MESSAGING & AI
 // ============================================
 function addMessage(role, content, id = null) {
-    const messageId = id || `msg-${Date.now()}-${Math.random()}`;
+    const messageId = id || `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     messages.push({ role, content, id: messageId });
     renderMessages();
     return messageId;
@@ -384,7 +384,12 @@ async function sendMessage() {
         if (loadingElement) loadingElement.remove();
         
         const assistantMessageId = addMessage('assistant', '');
-        const assistantElement = document.querySelector(`#${assistantMessageId} .message-content`);
+        const messageDiv = document.getElementById(assistantMessageId);
+        const assistantElement = messageDiv ? messageDiv.querySelector('.message-content') : null;
+        
+        if (!assistantElement) {
+            throw new Error('Could not find message element');
+        }
         
         if (agentEnabled) {
             if (subscriptionTier === 'free' && usage.agents >= 5) {
