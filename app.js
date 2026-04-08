@@ -2,25 +2,19 @@
 // BRAD AI - MAIN APPLICATION
 // ============================================
 
-// Supabase Configuration - REPLACE WITH YOUR OWN
 const SUPABASE_URL = 'https://fjxcmnyeipwequaxmdlx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqeGNtbnllaXB3ZXF1YXhtZGx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODM2NjAsImV4cCI6MjA5MTI1OTY2MH0.2d5ax1fYJtQIF0Ne0xhbH9tzQivS9M-WBN5WaVOSbBA';
 
-// Initialize Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Import AI services
 import { aiService } from './ai-service.js';
 import { agentService } from './agent-service.js';
 import { fileService } from './file-service.js';
 
-// ============================================
-// STATE
-// ============================================
+// State
 let currentUser = null;
 let currentTheme = 'light';
-let sidebarOpen = true;
 let messages = [];
 let usage = {
     swift: 0,
@@ -31,11 +25,9 @@ let usage = {
 };
 let subscriptionTier = 'free';
 let agentEnabled = false;
-let currentWorkflow = 'research-writer';
+const currentWorkflow = 'research-writer';
 
-// ============================================
-// DOM ELEMENTS
-// ============================================
+// DOM Elements
 const authContainer = document.getElementById('auth-container');
 const appContainer = document.getElementById('app');
 const authForm = document.getElementById('auth-form');
@@ -45,7 +37,6 @@ const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const authTabs = document.querySelectorAll('.auth-tab');
 const githubSigninBtn = document.getElementById('github-signin');
-const discordSigninBtn = document.getElementById('discord-signin');
 const signoutBtn = document.getElementById('signout-btn');
 const userEmailDisplay = document.getElementById('user-email-display');
 const userAvatar = document.getElementById('user-avatar');
@@ -63,9 +54,23 @@ const agentToggle = document.getElementById('agent-toggle');
 const fileInput = document.getElementById('file-input');
 const fileUploadBtn = document.getElementById('file-upload-btn');
 
+// Settings Modal Elements
+const settingsModal = document.getElementById('settings-modal');
+const userProfileBtn = document.getElementById('user-profile');
+const closeSettingsBtn = document.getElementById('close-settings-modal');
+const settingsEmail = document.getElementById('settings-email');
+const settingsUserId = document.getElementById('settings-user-id');
+const settingsPlan = document.getElementById('settings-plan');
+const settingsSwiftUsage = document.getElementById('settings-swift-usage');
+const settingsSparkUsage = document.getElementById('settings-spark-usage');
+const settingsFleetUsage = document.getElementById('settings-fleet-usage');
+const settingsAgentUsage = document.getElementById('settings-agent-usage');
+const settingsUploadUsage = document.getElementById('settings-upload-usage');
+const manageSubscriptionBtn = document.getElementById('manage-subscription-btn');
+const upgradePlanBtn = document.getElementById('upgrade-plan-btn');
+
 let authMode = 'signin';
 
-// Initialize Lucide icons
 lucide.createIcons();
 
 // ============================================
@@ -114,23 +119,10 @@ githubSigninBtn.addEventListener('click', async () => {
     }
 });
 
-discordSigninBtn.addEventListener('click', async () => {
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { redirectTo: window.location.origin }
-        });
-        if (error) throw error;
-    } catch (error) {
-        authError.textContent = error.message;
-    }
-});
-
 signoutBtn.addEventListener('click', async () => {
     await supabase.auth.signOut();
 });
 
-// Auth state listener
 supabase.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
         currentUser = session.user;
@@ -149,6 +141,7 @@ function showApp() {
     appContainer.style.display = 'flex';
     userEmailDisplay.textContent = currentUser.email;
     userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+    updateSettingsModal();
     lucide.createIcons();
 }
 
@@ -158,25 +151,21 @@ function showAuth() {
 }
 
 async function loadUserProfile() {
-    // In production, fetch from Supabase profiles table
     subscriptionTier = 'free';
     updateUsageDisplay();
 }
 
 async function loadUsageData() {
-    // In production, fetch from Supabase usage table
     updateUsageDisplay();
 }
 
 function updateUsageDisplay() {
     const limits = {
-        free: { swift: 15, spark: 20, fleet: 4, agents: 5, uploads: 10 },
-        pro: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: 200 },
-        xtreme: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: 1000 },
-        enterprise: { swift: Infinity, spark: Infinity, fleet: Infinity, agents: Infinity, uploads: Infinity }
+        free: { swift: 15, spark: 20, fleet: 4, agents: 5, uploads: 10 }
     };
     const limit = limits[subscriptionTier]?.swift || 15;
     usageBadge.innerHTML = `<span>${subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)} · Swift ${usage.swift}/${limit === Infinity ? '∞' : limit}</span>`;
+    updateSettingsModal();
 }
 
 // ============================================
@@ -203,8 +192,7 @@ setTheme(savedTheme);
 // ============================================
 sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
-    sidebarOpen = !sidebarOpen;
-    const icon = sidebarOpen ? 'panel-left-open' : 'panel-left-close';
+    const icon = sidebar.classList.contains('collapsed') ? 'panel-left-close' : 'panel-left-open';
     sidebarToggle.innerHTML = `<i data-lucide="${icon}"></i>`;
     lucide.createIcons();
 });
@@ -224,7 +212,52 @@ agentToggle.addEventListener('click', () => {
 });
 
 // ============================================
-// MESSAGING
+// SETTINGS MODAL
+// ============================================
+userProfileBtn.addEventListener('click', () => {
+    updateSettingsModal();
+    settingsModal.style.display = 'flex';
+});
+
+closeSettingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = 'none';
+});
+
+settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+    }
+});
+
+manageSubscriptionBtn.addEventListener('click', () => {
+    window.open('https://billing.stripe.com/p/login/test_123', '_blank');
+});
+
+upgradePlanBtn.addEventListener('click', () => {
+    window.open('https://buy.stripe.com/test_123', '_blank');
+});
+
+function updateSettingsModal() {
+    if (!currentUser) return;
+    
+    settingsEmail.textContent = currentUser.email;
+    settingsUserId.textContent = currentUser.id.substring(0, 16) + '...';
+    settingsPlan.textContent = subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1);
+    
+    const limits = {
+        free: { swift: 15, spark: 20, fleet: 4, agents: 5, uploads: 10 }
+    };
+    const limit = limits[subscriptionTier] || limits.free;
+    
+    settingsSwiftUsage.textContent = `${usage.swift} / ${limit.swift === Infinity ? '∞' : limit.swift}`;
+    settingsSparkUsage.textContent = `${usage.spark} / ${limit.spark === Infinity ? '∞' : limit.spark}`;
+    settingsFleetUsage.textContent = `${usage.fleet} / ${limit.fleet === Infinity ? '∞' : limit.fleet}`;
+    settingsAgentUsage.textContent = `${usage.agents} / ${limit.agents === Infinity ? '∞' : limit.agents}`;
+    settingsUploadUsage.textContent = `${usage.uploads} / ${limit.uploads === Infinity ? '∞' : limit.uploads}`;
+}
+
+// ============================================
+// MESSAGING & AI
 // ============================================
 function addMessage(role, content, id = null) {
     const messageId = id || `msg-${Date.now()}-${Math.random()}`;
@@ -275,9 +308,6 @@ function addLoadingMessage() {
     return loadingId;
 }
 
-// ============================================
-// SEND MESSAGE (AI INTEGRATION)
-// ============================================
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -297,7 +327,6 @@ async function sendMessage() {
     
     const model = modelSelect.value;
     
-    // Usage limit check
     if (subscriptionTier === 'free') {
         const limits = { swift: 15, spark: 20, fleet: 4 };
         if (usage[model] >= limits[model]) {
@@ -313,7 +342,6 @@ async function sendMessage() {
     try {
         const loadingId = addLoadingMessage();
         
-        // Load model if needed
         if (aiService.getCurrentModelType() !== model) {
             const originalBadgeText = usageBadge.innerHTML;
             usageBadge.innerHTML = `<span>Loading ${model}... 0%</span>`;
@@ -323,8 +351,6 @@ async function sendMessage() {
                     usageBadge.innerHTML = `<span>Loading ${model}: ${progress.progress}%</span>`;
                 } else if (progress.status === 'ready') {
                     usageBadge.innerHTML = originalBadgeText;
-                } else if (progress.status === 'error') {
-                    usageBadge.innerHTML = `<span style="color: #e5484d;">Error loading model</span>`;
                 }
             });
         }
@@ -336,7 +362,6 @@ async function sendMessage() {
         const assistantElement = document.querySelector(`#${assistantMessageId} .message-content`);
         
         if (agentEnabled) {
-            // Check agent usage limit
             if (subscriptionTier === 'free' && usage.agents >= 5) {
                 alert('Agent usage limit reached. Upgrade for unlimited agent runs.');
                 return;
@@ -350,7 +375,6 @@ async function sendMessage() {
             assistantElement.textContent = result.finalOutput;
             usage.agents++;
         } else {
-            // Standard single-model response
             await aiService.generateResponse(text, null, (token) => {
                 assistantElement.textContent += token;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
