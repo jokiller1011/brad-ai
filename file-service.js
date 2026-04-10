@@ -1,62 +1,52 @@
-// file-service.js
-// Fixed image processing for Transformers.js
+// agent-service.js
+// Updated with correct model names
 
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import { aiService } from './ai-service.js';
 
-class FileService {
+class AgentService {
     constructor() {
-        this.imageToTextPipeline = null;
-        this.isInitialized = false;
+        this.agents = new Map();
+        this.workflows = new Map();
     }
 
-    async initialize() {
-        if (this.isInitialized) return;
-        // Use a tiny OCR model
-        this.imageToTextPipeline = await pipeline('image-to-text', 'Xenova/trocr-small-handwritten');
-        this.isInitialized = true;
+    registerAgent(name, role, modelType, systemPrompt) {
+        this.agents.set(name, { name, role, modelType, systemPrompt });
     }
 
-    async extractTextFromFile(file) {
-        await this.initialize();
+    defineWorkflow(name, steps) {
+        this.workflows.set(name, steps);
+    }
 
-        if (file.type.startsWith('image/')) {
-            return await this.extractTextFromImage(file);
-        } else if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-            return await this.readTextFile(file);
-        } else {
-            throw new Error('Unsupported file type. Please upload an image or text file.');
+    async executeWorkflow(workflowName, userQuery, onProgress) {
+        const workflow = this.workflows.get(workflowName);
+        if (!workflow) throw new Error(`Workflow '${workflowName}' not found.`);
+
+        let currentInput = userQuery;
+        const results = [];
+
+        for (const step of workflow) {
+            const agent = this.agents.get(step.agent);
+            if (!agent) throw new Error(`Agent '${step.agent}' not found.`);
+
+            if (onProgress) onProgress({ step: step.name, agent: agent.name, status: 'running' });
+
+            if (aiService.getCurrentModelType() !== agent.modelType) {
+                await aiService.loadModel(agent.modelType);
+            }
+
+            const prompt = step.preparePrompt ? step.preparePrompt(currentInput, results) : currentInput;
+            const response = await aiService.generateResponse(prompt, agent.systemPrompt);
+
+            const stepResult = { agent: agent.name, role: agent.role, input: prompt, output: response };
+            results.push(stepResult);
+
+            currentInput = step.processOutput ? step.processOutput(response, results) : response;
+
+            if (onProgress) onProgress({ step: step.name, agent: agent.name, status: 'completed' });
         }
-    }
 
-    async extractTextFromImage(imageFile) {
-        try {
-            // Convert File to data URL which Transformers.js can handle
-            const dataUrl = await this.fileToDataURL(imageFile);
-            const result = await this.imageToTextPipeline(dataUrl);
-            return result[0].generated_text;
-        } catch (error) {
-            console.error('OCR error:', error);
-            throw new Error('Could not read text from image. Try a clearer picture.');
-        }
-    }
-
-    async readTextFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(e.target.error);
-            reader.readAsText(file);
-        });
-    }
-
-    fileToDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+        return { workflow: workflowName, results, finalOutput: currentInput };
     }
 }
 
-export const fileService = new FileService();
+export const agentService = new AgentService();
