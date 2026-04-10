@@ -151,7 +151,9 @@ signoutBtn.addEventListener('click', async () => {
     await supabase.auth.signOut();
 });
 
+// Auth state listener - this is critical
 supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', event, session?.user?.email);
     if (session?.user) {
         currentUser = session.user;
         showApp();
@@ -167,8 +169,10 @@ supabase.auth.onAuthStateChange((event, session) => {
 function showApp() {
     authContainer.style.display = 'none';
     appContainer.style.display = 'flex';
-    userEmailDisplay.textContent = currentUser.email;
-    userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+    if (currentUser) {
+        userEmailDisplay.textContent = currentUser.email;
+        userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+    }
     updateSettingsModal();
     lucide.createIcons();
 }
@@ -379,7 +383,6 @@ async function sendMessage() {
     welcomeScreen.style.display = 'none';
     
     try {
-        // Show loading overlay if model not loaded
         if (aiService.getCurrentModelType() !== model) {
             loadingOverlay.style.display = 'flex';
             loadingTitle.textContent = `Loading ${model.charAt(0).toUpperCase() + model.slice(1)} Model`;
@@ -432,7 +435,6 @@ async function sendMessage() {
             assistantElement.textContent = result.finalOutput;
             usage.agents++;
         } else {
-            // Use the local model via aiService (with proper chat formatting)
             await aiService.generateResponse(text, null, (token) => {
                 assistantElement.textContent += token;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -529,8 +531,9 @@ function initializeAgents() {
     ]);
 }
 
-// Check initial auth
+// Check initial auth session on page load
 supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('Initial session check:', session?.user?.email || 'No session');
     if (session) {
         currentUser = session.user;
         showApp();
