@@ -265,7 +265,6 @@ upgradePlanBtn.addEventListener('click', () => {
     window.open('https://buy.stripe.com/test_123', '_blank');
 });
 
-// Training toggle
 if (trainingToggle) {
     trainingToggle.addEventListener('change', (e) => {
         const enabled = e.target.checked;
@@ -406,7 +405,6 @@ async function sendMessage() {
             });
         }
         
-        // Add a small thinking indicator
         const loadingId = addLoadingMessage();
         
         const loadingElement = document.getElementById(loadingId);
@@ -434,7 +432,7 @@ async function sendMessage() {
             assistantElement.textContent = result.finalOutput;
             usage.agents++;
         } else {
-            // Use the built-in system prompt from aiService (Brad AI identity)
+            // Use the local model via aiService (with proper chat formatting)
             await aiService.generateResponse(text, null, (token) => {
                 assistantElement.textContent += token;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
