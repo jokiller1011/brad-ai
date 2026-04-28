@@ -455,3 +455,53 @@ input:checked + .slider:before {
   text-align: center;
   margin-top: 8px;
 }
+
+.discussion-container {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+  max-width: 90%;
+}
+.discussion-header {
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #10a37f;
+  font-size: 16px;
+}
+.discussion-message {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.discussion-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-size: 16px;
+}
+.discussion-bubble {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 12px;
+  max-width: 80%;
+  font-size: 14px;
+}
+.discussion-message.spark .discussion-bubble strong { color: #10a37f; }
+.discussion-message.swift .discussion-bubble strong { color: #5436da; }
+.discussion-message.fleet .discussion-bubble strong { color: #d9534f; }
+.final-answer {
+  margin-top: 12px;
+  background: #f0fdf4;
+  border-left: 4px solid #10a37f;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+}
