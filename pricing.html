@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BradAI – Pricing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pricing-container {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 20px;
+      font-family: 'Times New Roman', Times, serif;
+    }
+    .pricing-container h1 { text-align: center; margin-bottom: 40px; }
+    .plans {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+    .plan {
+      border: 1px solid #e0e0e0;
+      border-radius: 16px;
+      padding: 24px;
+      width: 250px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    .plan h3 { margin-bottom: 10px; }
+    .plan .price { font-size: 32px; margin: 16px 0; color: #10a37f; }
+    .plan ul { list-style: none; padding: 0; margin: 20px 0; text-align: left; }
+    .plan li { padding: 4px 0; }
+    .plan button {
+      background: #10a37f;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .plan button:disabled { background: #ccc; cursor: not-allowed; }
+    .back-link { display: block; text-align: center; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="pricing-container">
+    <h1>BradAI Pricing</h1>
+    <div class="plans">
+      <div class="plan">
+        <h3>Free</h3>
+        <div class="price">$0/mo</div>
+        <ul>
+          <li>Basic Spark model</li>
+          <li>5 queries/day</li>
+          <li>No file upload</li>
+        </ul>
+        <button disabled>Current</button>
+      </div>
+      <div class="plan">
+        <h3>Pro</h3>
+        <div class="price">$20/mo</div>
+        <ul>
+          <li>Spark & Swift models</li>
+          <li>Unlimited queries</li>
+          <li>File upload (50 MB)</li>
+          <li>Multi‑agent support</li>
+        </ul>
+        <button disabled>Coming soon</button>
+      </div>
+      <div class="plan">
+        <h3>Enterprise</h3>
+        <div class="price">$99/mo</div>
+        <ul>
+          <li>All models (Fleet included)</li>
+          <li>Priority support</li>
+          <li>API access</li>
+          <li>Custom skills</li>
+        </ul>
+        <button disabled>Coming soon</button>
+      </div>
+    </div>
+    <a href="index.html" class="back-link">← Back to Chat</a>
+  </div>
+</body>
+</html>
