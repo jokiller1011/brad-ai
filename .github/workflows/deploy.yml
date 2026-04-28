@@ -13,7 +13,7 @@ jobs:
 
       - name: Inject ElevenLabs API key
         env:
-          ELEVENLABS_KEY: ${{ secrets.elevenlabs-api }}
+          ELEVENLABS_KEY: ${{ secrets.ELEVENLABS_API }}
         run: |
           sed -i "s/__ELEVENLABS_API_KEY__/${ELEVENLABS_KEY}/g" js/app.js
 
